@@ -73,6 +73,14 @@ def rounded(draw, box, r, fill, outline=None, width=0):
     draw.rounded_rectangle([x, y, x + w, y + h], radius=r, fill=fill, outline=outline, width=width)
 
 
+def text_ls(d, xy, text, f, fill, ls=0):
+    """逐字畫，字與字之間多 ls px（和網站、PPTX、Slides 的字距一致）。"""
+    x, y = xy
+    for ch in text:
+        d.text((x, y), ch, font=f, fill=fill)
+        x += f.getlength(ch) + ls
+
+
 def overlay(img, page):
     img = img.convert("RGBA")
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
@@ -81,44 +89,47 @@ def overlay(img, page):
     if kind == "story":
         C = L.CARD
         f = font(C["font_px"])
-        lines = L.wrap(page["text"], C["w"] - 2 * C["pad_x"], lambda s: f.getlength(s))
+        lines = L.wrap(page["text"], C["w"] - 2 * C["pad_x"], L.spaced(f, C["letter_px"]))
         x, y, w, h = L.card_box(len(lines))
         rounded(d, (x, y, w, h), C["radius"], hex_rgba(C["fill"], C["alpha"]), hex_rgba(C["border"]), 4)
         for i, ln in enumerate(lines):
-            d.text((x + C["pad_x"], y + C["pad_top"] + i * C["line_px"] + (C["line_px"] - C["font_px"]) / 2 - 6), ln, font=f, fill=hex_rgba(C["ink"]))
+            text_ls(d, (x + C["pad_x"], y + C["pad_top"] + i * C["line_px"] + (C["line_px"] - C["font_px"]) / 2 - 6), ln, f,
+                    hex_rgba(C["ink"]), C["letter_px"])
         T = L.TAG
         tag = f"{page['chapter']}／8〈{page['song']}〉"
         ft = font(T["font_px"])
-        tw = ft.getlength(tag)
+        tw = L.spaced(ft, T["letter_px"])(tag)
         rounded(d, (T["x"], T["y"], tw + 2 * T["pad_x"], T["h"]), T["h"] / 2, hex_rgba(T["fill"], T["alpha"]))
-        d.text((T["x"] + T["pad_x"], T["y"] + (T["h"] - T["font_px"]) / 2 - 4), tag, font=ft, fill=hex_rgba(T["ink"]))
+        text_ls(d, (T["x"] + T["pad_x"], T["y"] + (T["h"] - T["font_px"]) / 2 - 4), tag, ft, hex_rgba(T["ink"]), T["letter_px"])
     elif kind == "song":
         S = L.SONG
         rounded(d, (S["x"], S["y"], S["w"], S["h"]), S["radius"], hex_rgba(S["fill"], S["alpha"]))
         cx = S["x"] + S["w"] / 2
         fl, ftt, ff = font(S["label_px"]), font(S["title_px"], True), font(S["form_px"], True)
         y = S["y"] + 60
-        d.text((cx - fl.getlength(page["label"]) / 2, y), page["label"], font=fl, fill=hex_rgba(S["ink"]))
+        text_ls(d, (cx - L.spaced(fl, S["label_ls"])(page["label"]) / 2, y), page["label"], fl, hex_rgba(S["ink"]), S["label_ls"])
         y += S["label_px"] + 50
         title = f"〈{page['song']}〉"
-        d.text((cx - ftt.getlength(title) / 2, y), title, font=ftt, fill=hex_rgba(S["ink"]))
+        text_ls(d, (cx - L.spaced(ftt, S["title_ls"])(title) / 2, y), title, ftt, hex_rgba(S["ink"]), S["title_ls"])
         y += S["title_px"] + 60
-        fw = ff.getlength(page["form"]) + 70
+        fw = L.spaced(ff, S["form_ls"])(page["form"]) + 70
         rounded(d, (cx - fw / 2, y, fw, S["form_px"] + 36), (S["form_px"] + 36) / 2, hex_rgba(S["form_fill"]))
-        d.text((cx - fw / 2 + 35, y + 12), page["form"], font=ff, fill=hex_rgba(S["form_ink"]))
+        text_ls(d, (cx - fw / 2 + 35, y + 12), page["form"], ff, hex_rgba(S["form_ink"]), S["form_ls"])
     else:
         C = L.COVER
         x, y, w, h = C["title_box"]
         rounded(d, (x, y, w, h), C["radius"], hex_rgba(C["fill"], C["alpha"]))
         ft = font(C["title_px"], True)
-        d.text((x + w / 2 - ft.getlength(page["title"]) / 2, y + (h - C["title_px"]) / 2 - 10), page["title"], font=ft, fill=hex_rgba(C["title_ink"]))
+        text_ls(d, (x + w / 2 - L.spaced(ft, C["title_ls"])(page["title"]) / 2, y + (h - C["title_px"]) / 2 - 10), page["title"], ft,
+                hex_rgba(C["title_ink"]), C["title_ls"])
         x, y, w, h = C["credits_box"]
         rounded(d, (x, y, w, h), C["radius"], hex_rgba(C["fill"], C["alpha"]))
-        yy = y + 28
+        total = sum(int(px * 1.4) for px in C["credits_px"]) + C["credits_gap"] * (len(C["credits_px"]) - 1)
+        yy = y + (h - total) / 2
         for ln, px in zip(page["credits"], C["credits_px"]):
             fc = font(px, px >= 40)
-            d.text((x + w / 2 - fc.getlength(ln) / 2, yy), ln, font=fc, fill=hex_rgba(C["credits_ink"]))
-            yy += px + 34
+            text_ls(d, (x + w / 2 - L.spaced(fc, C["credits_ls"])(ln) / 2, yy), ln, fc, hex_rgba(C["credits_ink"]), C["credits_ls"])
+            yy += int(px * 1.4) + C["credits_gap"]
     # 安全線（重點要在這條線以上；只在故事頁畫）
     if kind == "story":
         d.line([(0, L.SAFE_BOTTOM), (1920, L.SAFE_BOTTOM)], fill=(255, 0, 80, 110), width=3)

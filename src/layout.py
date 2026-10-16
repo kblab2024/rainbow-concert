@@ -7,9 +7,11 @@ import os
 CANVAS_W, CANVAS_H = 1920, 1080
 PX_PER_IN = 144.0
 
-# 故事文字卡（下方）：高度依行數；最長一段 3 行（34pt、內寬 11.0 in，已用 MSJH 量過）
-CARD = dict(x=112, w=1696, bottom=1052, pad_x=56, pad_top=30, pad_bottom=34,
-            font_px=68, line_px=95, radius=36,
+# 故事文字卡（下方）：高度依行數；最長一段 3 行。
+# 10/16 朋友說「太擠了」：字級 68→62px（31pt）、字距 0→5px（約 0.08em）、行高 95→102px（1.65 倍），
+# 卡片放寬到 x 96–1824、內邊距加大；29 段的行數不變（已用 MSJH 量過）
+CARD = dict(x=96, w=1728, bottom=1056, pad_x=62, pad_top=34, pad_bottom=38,
+            font_px=62, letter_px=5, line_px=102, radius=36,
             fill="#FFF8EC", alpha=0.93, border="#E7D3AE", ink="#3B2A1A")
 
 
@@ -19,16 +21,17 @@ def card_box(lines):
 
 
 # 故事頁左上角小標：「1／8〈山頂的黑狗兄〉」
-TAG = dict(x=40, y=34, h=64, pad_x=26, font_px=36, fill="#FFF8EC", alpha=0.9, ink="#5A4632")
+TAG = dict(x=40, y=34, h=64, pad_x=26, font_px=36, letter_px=2, fill="#FFF8EC", alpha=0.9, ink="#5A4632")
 
 # 歌曲頁左半：歌名區
 SONG = dict(x=72, y=290, w=860, h=470, radius=40, fill="#FFF8EC", alpha=0.9, ink="#3B2A1A",
-            label_px=52, title_px=116, form_px=50, form_fill="#E8475F", form_ink="#FFFFFF")
+            label_px=52, title_px=108, form_px=50, label_ls=3, title_ls=4, form_ls=3,
+            form_fill="#E8475F", form_ink="#FFFFFF")
 
 # 封面、結尾：標題緞帶（上）、計畫名稱卡（下）
-COVER = dict(title_box=(150, 250, 1620, 160), title_px=88, title_ink="#3B2A1A",
-             credits_box=(230, 806, 1460, 234), credits_px=(32, 40, 32), credits_ink="#3B2A1A",
-             fill="#FFF8EC", alpha=0.92, radius=40)
+COVER = dict(title_box=(150, 250, 1620, 160), title_px=88, title_ls=3, title_ink="#3B2A1A",
+             credits_box=(230, 806, 1460, 234), credits_px=(32, 40, 32), credits_ls=2, credits_gap=24,
+             credits_ink="#3B2A1A", fill="#FFF8EC", alpha=0.92, radius=40)
 
 # 構圖規則（STYLE.md 也寫）：重點（臉、手、主要道具）要在這條線以上
 SAFE_BOTTOM = 690
@@ -45,6 +48,11 @@ FONT_BOLD_PATHS = [
     os.environ.get("SLIDEKIT_MEASURE_FONT_BOLD", ""),
     "/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts/MSJHBD.ttf",
 ]
+
+
+def spaced(font, letter_px):
+    """量字（含字距）：每個字的字寬加上字距；PowerPoint 與 CSS 的字距都加在每個字後面。"""
+    return lambda s: font.getlength(s) + letter_px * len(s)
 
 
 def font_path(bold=False):

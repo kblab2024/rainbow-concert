@@ -2,7 +2,7 @@
 換頁 Morph（舊版退成 Fade）、換到該頁時文字自動依序淡入（一按就是下一頁）。
 
 python src/build_pptx.py [--out 成品/<檔名>.pptx]
-重用 kit 的 gen_pptx：textbox、_font、para（hangingPunct=0）、rect（圓角＋透明度）、n_lines（MSJH 量行數）。
+重用 kit 的 gen_pptx：textbox、_font、para（hangingPunct=0）、rect（圓角＋透明度）；量字用 MSJH（layout.spaced 含字距）。
 """
 import argparse
 import json
@@ -54,13 +54,18 @@ def rrect(slide, x, y, w, h, fill, alpha=None, r=36, border=None, name=None):
     return shp
 
 
-def put_text(tf, text, px, color, bold=False, align=PP_ALIGN.LEFT, line=1.0, first=True):
-    return gp.para(tf, text, PT(px), H(color), bold, align, 0, line, first=first, markup=False)
+def put_text(tf, text, px, color, bold=False, align=PP_ALIGN.LEFT, line=1.0, first=True, ls=0):
+    """ls：字距（px）；寫成 run 的 spc（1/100 pt，1 px = 0.5 pt）。"""
+    para = gp.para(tf, text, PT(px), H(color), bold, align, 0, line, first=first, markup=False)
+    if ls:
+        for r in para.runs:
+            r._r.get_or_add_rPr().set("spc", str(int(round(ls / 2 * 100))))
+    return para
 
 
-def fit_px(text, want_px, max_w, bold=False):
+def fit_px(text, want_px, max_w, bold=False, ls=0):
     px = want_px
-    while px > 20 and mfont(px, bold).getlength(text) > max_w:
+    while px > 20 and L.spaced(mfont(px, bold), ls)(text) > max_w:
         px -= 2
     return px
 
@@ -69,19 +74,19 @@ def story_slide(s, p, lines):
     C, T = L.CARD, L.TAG
     x, y, w, h = L.card_box(len(lines))
     tag = f"{p['chapter']}／8〈{p['song']}〉"
-    tw = mfont(T["font_px"]).getlength(tag) + 2 * T["pad_x"] + 8
+    tw = L.spaced(mfont(T["font_px"]), T["letter_px"])(tag) + 2 * T["pad_x"] + 8
     pill = rrect(s, T["x"], T["y"], tw, T["h"], T["fill"], T["alpha"], T["h"] / 2, name="小標")
     tf = pill.text_frame
     for m in ("margin_left", "margin_right", "margin_top", "margin_bottom"):
         setattr(tf, m, 0)
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     tf.word_wrap = False
-    put_text(tf, tag, T["font_px"], T["ink"], align=PP_ALIGN.CENTER)
+    put_text(tf, tag, T["font_px"], T["ink"], align=PP_ALIGN.CENTER, ls=T["letter_px"])
     card = rrect(s, x, y, w, h, C["fill"], C["alpha"], C["radius"], C["border"], name="文字卡")
     # 文字框比內寬多 0.2 英寸，換行點完全照 layout.wrap 算好的行（以 ⏎ 換行），PowerPoint 不會自己再換
     tb, tf = textbox(s, x + C["pad_x"], y + C["pad_top"] - 4, w - 2 * C["pad_x"] + 29, len(lines) * C["line_px"] + 20, "故事文字")
-    line = C["line_px"] / (PT(C["font_px"]) * 2 * 1.12)   # 95px 行距 → 行距倍數（kit 校正係數 1.12）
-    put_text(tf, "⏎".join(lines), C["font_px"], C["ink"], line=round(line, 3))
+    line = C["line_px"] / (PT(C["font_px"]) * 2 * 1.12)   # 102px 行距 → 行距倍數（kit 校正係數 1.12）
+    put_text(tf, "⏎".join(lines), C["font_px"], C["ink"], line=round(line, 3), ls=C["letter_px"])
     return [(pill, "fade", 0, 500), (card, "fade", 300, 700), (tb, "rise", 450, 700)]
 
 
@@ -90,13 +95,13 @@ def song_slide(s, p):
     box = rrect(s, S["x"], S["y"], S["w"], S["h"], S["fill"], S["alpha"], S["radius"], name="歌名框")
     cx, inner = S["x"], S["w"]
     lab, tf = textbox(s, cx, S["y"] + 58, inner, S["label_px"] * 1.5, "第幾首")
-    put_text(tf, p["label"], S["label_px"], S["ink"], align=PP_ALIGN.CENTER)
+    put_text(tf, p["label"], S["label_px"], S["ink"], align=PP_ALIGN.CENTER, ls=S["label_ls"])
     title = f"〈{p['song']}〉"
-    tpx = fit_px(title, S["title_px"], inner - 70, True)
+    tpx = fit_px(title, S["title_px"], inner - 70, True, S["title_ls"])
     tt, tf = textbox(s, cx, S["y"] + 58 + S["label_px"] * 1.5 + 30, inner, tpx * 1.45, "歌名", MSO_ANCHOR.MIDDLE)
     tf.word_wrap = False
-    put_text(tf, title, tpx, S["ink"], bold=True, align=PP_ALIGN.CENTER)
-    fw = mfont(S["form_px"], True).getlength(p["form"]) + 84
+    put_text(tf, title, tpx, S["ink"], bold=True, align=PP_ALIGN.CENTER, ls=S["title_ls"])
+    fw = L.spaced(mfont(S["form_px"], True), S["form_ls"])(p["form"]) + 84
     fh = S["form_px"] + 36
     pill = rrect(s, cx + (inner - fw) / 2, S["y"] + S["h"] - fh - 64, fw, fh, S["form_fill"], None, fh / 2, name="演出形式")
     tf = pill.text_frame
@@ -104,7 +109,7 @@ def song_slide(s, p):
         setattr(tf, m, 0)
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     tf.word_wrap = False
-    put_text(tf, p["form"], S["form_px"], S["form_ink"], bold=True, align=PP_ALIGN.CENTER)
+    put_text(tf, p["form"], S["form_px"], S["form_ink"], bold=True, align=PP_ALIGN.CENTER, ls=S["form_ls"])
     return [(box, "fade", 0, 500), (lab, "fade", 200, 500), (tt, "zoom", 400, 800), (pill, "fade", 1000, 500)], tpx
 
 
@@ -112,17 +117,18 @@ def cover_slide(s, p):
     V = L.COVER
     x, y, w, h = V["title_box"]
     tbox = rrect(s, x, y, w, h, V["fill"], V["alpha"], V["radius"], name="標題框")
-    tpx = fit_px(p["title"], V["title_px"], w - 80, True)
+    tpx = fit_px(p["title"], V["title_px"], w - 80, True, V["title_ls"])
     tt, tf = textbox(s, x, y, w, h, "標題", MSO_ANCHOR.MIDDLE)
     tf.word_wrap = False
-    put_text(tf, p["title"], tpx, V["title_ink"], bold=True, align=PP_ALIGN.CENTER)
+    put_text(tf, p["title"], tpx, V["title_ink"], bold=True, align=PP_ALIGN.CENTER, ls=V["title_ls"])
     x, y, w, h = V["credits_box"]
     cbox = rrect(s, x, y, w, h, V["fill"], V["alpha"], V["radius"], name="計畫名稱框")
     ct, tf = textbox(s, x, y, w, h, "計畫名稱", MSO_ANCHOR.MIDDLE)
     tf.word_wrap = False
     for i, (ln, px) in enumerate(zip(p["credits"], V["credits_px"])):
-        para = put_text(tf, ln, px, V["credits_ink"], bold=px >= 40, align=PP_ALIGN.CENTER, line=1.0, first=(i == 0))
-        para.space_after = Pt(8)
+        para = put_text(tf, ln, px, V["credits_ink"], bold=px >= 40, align=PP_ALIGN.CENTER, line=1.0, first=(i == 0),
+                        ls=V["credits_ls"])
+        para.space_after = Pt(PT(V["credits_gap"]))
     return [(tbox, "fade", 0, 600), (tt, "wipe", 300, 1500), (cbox, "fade", 1200, 600), (ct, "rise", 1400, 800)]
 
 
@@ -168,12 +174,12 @@ def build(out):
             missing.append(p["scene"])
             gp.set_bg(s, "F6F1E6")
         if p["kind"] == "story":
-            lines = L.wrap(p["text"], inner, lambda t: mf.getlength(t))
-            # 用 kit 的 n_lines 再量一次（PowerPoint 的寬度），每行都要是 1 行
+            meas = L.spaced(mf, L.CARD["letter_px"])
+            lines = L.wrap(p["text"], inner, meas)
+            # 每行（含字距）都要放得進文字框（內寬＋29 px），PowerPoint 才不會自己再換行
             for ln in lines:
-                n = gp.n_lines(ln, PT(L.CARD["font_px"]), IN(inner) + 0.2)
-                if n != 1:
-                    report.append(f"{p['id']} 有一行 PowerPoint 會換成 {n} 行：{ln}")
+                if meas(ln) > inner + 29:
+                    report.append(f"{p['id']} 有一行太寬（{meas(ln):.0f} px）：{ln}")
             eff = story_slide(s, p, lines)
             first_of_ch = p["para"] == 1
             A.transition(s, "fade" if first_of_ch else "morph", 1200 if first_of_ch else 900)

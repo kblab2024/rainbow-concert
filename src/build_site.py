@@ -25,7 +25,7 @@ def page_data(story):
     for p in story["pages"]:
         q = {"id": p["id"], "k": p["kind"], "img": p["scene"], "alt": p["alt"]}
         if p["kind"] == "story":
-            q["lines"] = L.wrap(p["text"], inner, lambda s: f.getlength(s))
+            q["lines"] = L.wrap(p["text"], inner, L.spaced(f, L.CARD["letter_px"]))
             q["text"] = p["text"]
             q["tag"] = f"{p['chapter']}／8〈{p['song']}〉"
             q["box"] = L.card_box(len(q["lines"]))
@@ -72,19 +72,19 @@ body{overflow:hidden;touch-action:manipulation}
 .ov{position:absolute;inset:0;pointer-events:none;transition:opacity .28s ease}
 .ov.leaving{opacity:0}
 /* 故事頁 */
-.tag{position:absolute;left:%%TAG_X%%px;top:%%TAG_Y%%px;height:%%TAG_H%%px;padding:0 %%TAG_PAD%%px;border-radius:%%TAG_R%%px;background:rgba(255,248,236,.9);color:var(--ink-soft);font-size:%%TAG_FONT%%px;line-height:%%TAG_H%%px;white-space:nowrap;animation:fadeIn .6s ease both}
+.tag{position:absolute;left:%%TAG_X%%px;top:%%TAG_Y%%px;height:%%TAG_H%%px;padding:0 %%TAG_PAD%%px;border-radius:%%TAG_R%%px;background:rgba(255,248,236,.9);color:var(--ink-soft);font-size:%%TAG_FONT%%px;letter-spacing:%%TAG_LS%%px;line-height:%%TAG_H%%px;white-space:nowrap;animation:fadeIn .6s ease both}
 .card{position:absolute;background:var(--cream-a);border:4px solid var(--border);border-radius:%%CARD_R%%px;padding:%%CARD_PT%%px %%CARD_PX%%px %%CARD_PB%%px;box-shadow:0 10px 30px rgba(59,42,26,.18);animation:rise .7s cubic-bezier(.2,.7,.2,1) .35s both}
-.card .ln{display:block;height:%%LINE%%px;line-height:%%LINE%%px;font-size:%%FONT%%px;white-space:nowrap;letter-spacing:.01em}
+.card .ln{display:block;height:%%LINE%%px;line-height:%%LINE%%px;font-size:%%FONT%%px;white-space:nowrap;letter-spacing:%%CARD_LS%%px}
 /* 歌曲頁 */
 .songbox{position:absolute;left:%%SONG_X%%px;top:%%SONG_Y%%px;width:%%SONG_W%%px;height:%%SONG_H%%px;border-radius:%%SONG_R%%px;background:rgba(255,248,236,.9);box-shadow:0 12px 36px rgba(59,42,26,.22);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;animation:fadeIn .6s ease both}
-.songbox .label{font-size:%%SONG_LABEL%%px;color:var(--ink-soft);animation:fadeIn .6s ease .25s both}
-.songbox .title{font-size:%%SONG_TITLE%%px;line-height:1.15;color:var(--ink);white-space:nowrap;animation:pop .9s cubic-bezier(.2,.8,.25,1.15) .45s both}
-.songbox .form{font-size:%%SONG_FORM%%px;color:#fff;background:var(--accent);border-radius:999px;padding:14px 42px;white-space:nowrap;animation:rise .7s ease 1s both}
+.songbox .label{font-size:%%SONG_LABEL%%px;letter-spacing:%%SONG_LABEL_LS%%px;color:var(--ink-soft);animation:fadeIn .6s ease .25s both}
+.songbox .title{font-size:%%SONG_TITLE%%px;letter-spacing:%%SONG_TITLE_LS%%px;line-height:1.15;color:var(--ink);white-space:nowrap;animation:pop .9s cubic-bezier(.2,.8,.25,1.15) .45s both}
+.songbox .form{font-size:%%SONG_FORM%%px;letter-spacing:%%SONG_FORM_LS%%px;color:#fff;background:var(--accent);border-radius:999px;padding:14px 42px;white-space:nowrap;animation:rise .7s ease 1s both}
 /* 封面、結尾 */
 .titlebox{position:absolute;left:%%TB_X%%px;top:%%TB_Y%%px;width:%%TB_W%%px;height:%%TB_H%%px;border-radius:%%COVER_R%%px;background:rgba(255,248,236,.92);box-shadow:0 12px 36px rgba(59,42,26,.2);display:flex;align-items:center;justify-content:center;animation:fadeIn .5s ease both}
-.titlebox h1{margin:0;font-weight:normal;font-size:%%COVER_TITLE%%px;color:var(--ink);white-space:nowrap;animation:wipe 1.6s cubic-bezier(.3,.6,.2,1) .3s both}
-.credits{position:absolute;left:%%CR_X%%px;top:%%CR_Y%%px;width:%%CR_W%%px;height:%%CR_H%%px;border-radius:%%COVER_R%%px;background:rgba(255,248,236,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--ink)}
-.credits div{white-space:nowrap;animation:rise .7s ease both}
+.titlebox h1{margin:0;font-weight:normal;font-size:%%COVER_TITLE%%px;letter-spacing:%%COVER_TITLE_LS%%px;color:var(--ink);white-space:nowrap;animation:wipe 1.6s cubic-bezier(.3,.6,.2,1) .3s both}
+.credits{position:absolute;left:%%CR_X%%px;top:%%CR_Y%%px;width:%%CR_W%%px;height:%%CR_H%%px;border-radius:%%COVER_R%%px;background:rgba(255,248,236,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:%%CR_GAP%%px;color:var(--ink)}
+.credits div{white-space:nowrap;letter-spacing:%%CR_LS%%px;animation:rise .7s ease both}
 .credits .c0{font-size:%%CR0%%px;animation-delay:1.3s}.credits .c1{font-size:%%CR1%%px;animation-delay:1.6s}.credits .c2{font-size:%%CR2%%px;animation-delay:1.9s}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
@@ -108,7 +108,7 @@ body{overflow:hidden;touch-action:manipulation}
   body{overflow:auto}
   #frame{position:relative;inset:auto;margin:0;width:100vw;height:56.25vw}
   .ov{display:none}
-  #below{display:block;padding:22px 20px 110px;font-size:21px;line-height:1.75;color:#FFF8EC}
+  #below{display:block;padding:22px 20px 110px;font-size:21px;line-height:1.9;letter-spacing:.05em;color:#FFF8EC}
   #below .btag{display:inline-block;font-size:15px;color:#E9D8B8;border:1px solid rgba(233,216,184,.45);border-radius:999px;padding:2px 12px;margin-bottom:12px}
   #below p{margin:0}
   #below .blabel{font-size:17px;color:#E9D8B8}
@@ -271,7 +271,9 @@ def build():
         "SITE": SITE_URL, "N": str(len(pages)),
         "TAG_X": T["x"], "TAG_Y": T["y"], "TAG_H": T["h"], "TAG_PAD": T["pad_x"], "TAG_R": T["h"] // 2, "TAG_FONT": T["font_px"],
         "CARD_R": C["radius"], "CARD_PT": C["pad_top"] - 4, "CARD_PX": C["pad_x"] - 4, "CARD_PB": C["pad_bottom"] - 4,
-        "LINE": C["line_px"], "FONT": C["font_px"],
+        "LINE": C["line_px"], "FONT": C["font_px"], "CARD_LS": C["letter_px"], "TAG_LS": T["letter_px"],
+        "SONG_LABEL_LS": S["label_ls"], "SONG_TITLE_LS": S["title_ls"], "SONG_FORM_LS": S["form_ls"],
+        "COVER_TITLE_LS": V["title_ls"], "CR_LS": V["credits_ls"], "CR_GAP": V["credits_gap"],
         "SONG_X": S["x"], "SONG_Y": S["y"], "SONG_W": S["w"], "SONG_H": S["h"], "SONG_R": S["radius"],
         "SONG_LABEL": S["label_px"], "SONG_TITLE": S["title_px"], "SONG_FORM": S["form_px"],
         "TB_X": tb[0], "TB_Y": tb[1], "TB_W": tb[2], "TB_H": tb[3], "COVER_R": V["radius"], "COVER_TITLE": V["title_px"],
