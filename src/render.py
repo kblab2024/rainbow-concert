@@ -138,25 +138,67 @@ def list_scenes(ch):
     return ch.eval("JSON.stringify(Object.entries(SCENES).map(([k,v])=>[k,v.dur,v.file]))")
 
 
-def build_palette(frames):
-    """取樣各格拼起來，算一組全片共用的調色盤（不抖色，避免閃爍）。"""
+def source_colors():
+    """lib.js 與場景檔裡寫死的色碼（扁平色塊的「正確顏色」），量化時優先保留。"""
+    import re
+    cols = set()
+    for f in [os.path.join(ART, "lib.js")] + scene_files():
+        for h in re.findall(r"#([0-9A-Fa-f]{6})\b", open(f, encoding="utf-8").read()):
+            cols.add(int(h, 16))
+    return cols
+
+
+_SRC_COLORS = None
+
+
+def build_palette(frames, reserve=120):
+    """全片共用一組調色盤（不抖色，避免閃爍）：
+    1. 先保留畫面上確實出現、且是原始色碼的扁平色（衣服、膚色、髮色等），最多 reserve 色，確保小面積的顏色不被換掉；
+    2. 其餘的色（漸層、反鋸齒邊）用中位切割補滿 255 色。index 255 留給透明，用不會出現的洋紅佔位。"""
+    import numpy as np
+    global _SRC_COLORS
+    if _SRC_COLORS is None:
+        _SRC_COLORS = source_colors()
     step = max(1, len(frames) // 8)
     sample = frames[::step]
+    arr = np.concatenate([np.asarray(f, dtype=np.uint32).reshape(-1, 3) for f in sample[:6]])
+    packed = (arr[:, 0] << 16) | (arr[:, 1] << 8) | arr[:, 2]
+    vals, counts = np.unique(packed, return_counts=True)
+    order = np.argsort(-counts)
+    keys = []
+    for v, c in zip(vals[order], counts[order]):
+        if c < 60:
+            break
+        if int(v) in _SRC_COLORS:
+            keys.append(int(v))
+            if len(keys) >= reserve:
+                break
+    rest = COLORS - len(keys)
     tw, th = sample[0].width // 2, sample[0].height // 2
     mont = Image.new("RGB", (tw, th * len(sample)))
     for i, f in enumerate(sample):
         mont.paste(f.resize((tw, th), Image.BILINEAR), (0, i * th))
-    return mont.quantize(colors=COLORS, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    mc = mont.quantize(colors=rest, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    pal = mc.getpalette()[:rest * 3]
+    pal += [0, 0, 0] * (rest - len(pal) // 3)
+    for k in keys:
+        pal += [(k >> 16) & 255, (k >> 8) & 255, k & 255]
+    pal += [255, 0, 255]                      # index 255：透明佔位
+    pimg = Image.new("P", (1, 1))
+    pimg.putpalette(pal)
+    return pimg
 
 
 def save_gif(frames, path):
-    """全片共用調色盤（255 色，不抖色）；第 2 格起，和前一格相同的像素設成透明（index 255），
-    GIF 只存有變的地方，檔案約小到 1/3，畫面不變。"""
+    """第 2 格起，和前一格相同的像素設成透明（index 255），GIF 只存有變的地方，檔案約小到 1/3，畫面不變。"""
     import numpy as np
     pal = build_palette(frames)
     q = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]
     arrs = [np.array(x) for x in q]
-    palette = q[0].getpalette()
+    for i, a in enumerate(arrs):
+        if (a == 255).any():
+            raise RuntimeError(f"{os.path.basename(path)} 第 {i} 格用到透明 index 255")
+    palette = pal.getpalette()
     out = [q[0]]
     for i in range(1, len(arrs)):
         a = arrs[i].copy()

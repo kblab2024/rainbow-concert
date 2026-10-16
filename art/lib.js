@@ -176,8 +176,8 @@
   }
   function ground(y, color = P.grass, o = {}) {
     const pts = [];
-    for (let x = -40; x <= 1960; x += 120) pts.push([x, y + (o.amp || 10) * Math.sin(x / 260 + (o.ph || 0))]);
-    return path(smooth(pts) + ' L1960 1100 L-40 1100 Z', color);
+    for (let x = -40; x <= 2080; x += 120) pts.push([x, y + (o.amp || 10) * Math.sin(x / 260 + (o.ph || 0))]);
+    return path(smooth(pts) + ' L2080 1100 L-40 1100 Z', color);
   }
   // 草叢：一排小草，k 為擺動圈數
   function tufts(seed, n, x0, x1, y0, y1, t, o = {}) {
@@ -372,6 +372,8 @@
   function noteStream(x, y, dx, dy, n, t, o = {}) {
     const cols = o.colors || [P.noteGold, P.noteRed, P.noteBlue, P.noteGreen, P.notePurple], out = [];
     const k = o.k || 1;
+    // 相鄰音符間距至少 minGap×s（預設 95，約一個音符高）；路徑太短就自動少放幾個
+    n = Math.max(1, Math.min(n, Math.floor(Math.hypot(dx, dy) / ((o.minGap || 95) * (o.s || 1)))));
     for (let i = 0; i < n; i++) {
       const u = loop(t, k, i / n);
       const px = x + dx * u + (o.wiggle === undefined ? 26 : o.wiggle) * wave(u, 1, i * 0.37), py = y + dy * u;
@@ -388,7 +390,7 @@
     const r = rng(seed), out = [], k = o.k || 3, ang = (o.angle || 12) * Math.PI / 180, len = o.len || 46, col = o.color || '#CFE3F2';
     const y0 = o.y0 === undefined ? -60 : o.y0, y1 = o.y1 === undefined ? 1100 : o.y1, H = y1 - y0;
     for (let i = 0; i < n; i++) {
-      const x = r() * 2100 - 90, off = r(), u = loop(t, k, off), y = y0 + H * u, xx = x - Math.tan(ang) * (y - y0) * 0.5;
+      const x = r() * 2100 - 240, off = r(), u = loop(t, k, off), y = y0 + H * u, xx = x + Math.tan(ang) * (y - y0) * 0.5;
       out.push(line(xx, y, xx - Math.sin(ang) * len, y - Math.cos(ang) * len, col, o.w || 3.2, { opacity: o.opacity || 0.75 }));
     }
     return g(out);

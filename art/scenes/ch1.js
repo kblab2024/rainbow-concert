@@ -3,10 +3,13 @@
   const R = RC, P = R.P;
 
   const village = R.village;
+  // peak(x0, base, sc) 山頂一帶（中心左右約 ±140×sc）的地面高度；用二次式近似 lib 的山頂曲線
+  const peakTop = (x0, base, sc, px) => { const xl = (px - x0) / sc; return base + sc * (-515 + 0.0027 * (xl - 10) * (xl - 10)); };
   // 四人站在山頂唱歌（第 1 章）
   function quartet(x, y, s, t, o = {}) {
     const ppl = [['f1', -1.5], ['heigou', -0.5], ['f2', 0.5], ['f3', 1.5]];
-    return R.g(ppl.map(([w, k], i) => R.person(w, { x: x + k * 150 * s, y, s, pose: o.pose || 'sing', p: R.loop(t, 1, i * 0.18), mouth: 'sing', mouthK: R.wave(t, 2, i * 0.25), shirt: o.shirt })));
+    // y 可以是數字，或 px => y（每個人站在山坡實際的高度）
+    return R.g(ppl.map(([w, k], i) => { const px = x + k * 150 * s; return R.person(w, { x: px, y: typeof y === 'function' ? y(px) : y, s, pose: o.pose || 'sing', p: R.loop(t, 1, i * 0.18), mouth: 'sing', mouthK: R.wave(t, 2, i * 0.25), shirt: o.shirt }); }));
   }
 
   // ── 封面：彩虹、黑狗兄的山、山腳村莊、稻田；音符從村莊飄向彩虹
@@ -31,11 +34,11 @@
     R.sun(1700, 170, 64, t),
     R.cloud(300 + 14 * R.wave(t), 170, 0.85), R.cloud(1050 + 12 * R.wave(t, 1, 0.4), 120, 0.65),
     R.ridge({ y: 560, amp: 50, seed: 21, color: P.mtFar }),
-    R.peak(700, 700, 0.95, 'day', t),
-    // 山頂四人（遠景，小）
-    quartet(700 - 66, 207, 0.28, t),
-    R.noteStream(760, 190, 520, 280, 6, t, { s: 0.75 }),
-    R.noteStream(640, 200, -400, 300, 5, t, { s: 0.7 }),
+    R.peak(700, 790, 1.05, 'day', t),
+    // 山頂四人（遠景；放大到 0.4，投影幕上看得出是四個人在唱歌）。peakTop：peak() 山頂附近的地面高度
+    quartet(650, px => peakTop(700, 790, 1.05, px) + 6, 0.4, t),
+    R.noteStream(760, 170, 560, 300, 6, t, { s: 0.8 }),
+    R.noteStream(580, 180, -420, 320, 5, t, { s: 0.75 }),
     R.ridge({ y: 650, amp: 22, seed: 8, color: P.mtNear }),
     village(1360, 640, 0.9, t),
     R.tree(130, 660, 1.0, t, { ph: 0.2 }),
@@ -72,7 +75,7 @@
     R.path(R.smooth([[700, 1100], [900, 800], [1150, 720], [1450, 715], [1700, 750], [1960, 820]]) + ' L1960 1100 Z', '#5F7F68'),
     R.at(1820, 760, 0.75, R.tree(0, 0, 1, t, { kind: 'round' })),
     quartet(1360, 760, 0.86, t),
-    R.noteStream(1180, 560, 120, -520, 6, t, { s: 1.5 }),
-    R.noteStream(1560, 560, 160, -520, 6, t, { s: 1.3, k: 1 }),
+    R.noteStream(1180, 560, 120, -640, 4, t, { s: 1.4 }),
+    R.noteStream(1560, 560, 160, -640, 4, t, { s: 1.25, k: 1 }),
   ]);
 })();
