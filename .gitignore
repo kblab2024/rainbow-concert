@@ -1,0 +1,5 @@
+_archive/
+成品/
+__pycache__/
+*.pyc
+.DS_Store

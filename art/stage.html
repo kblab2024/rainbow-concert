@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden}
+  svg{display:block;width:100vw;height:100vh}
+</style>
+<script src="lib.js"></script>
+</head>
+<body>
+<svg id="stage" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice"></svg>
+<script>
+  // 依 ?files=ch1,ch2 依序載入 scenes/*.js；每個檔用 scene(id, dur, draw) 註冊場景
+  window.SCENES = window.SCENES || {};
+  window.__file = null;
+  (function(){
+    const q = new URLSearchParams(location.search);
+    const files = (q.get('files') || '').split(',').filter(Boolean);
+    let i = 0;
+    function next(){
+      if (i >= files.length) { document.body.dataset.ready = '1'; return; }
+      const f = files[i++];
+      window.__file = f;
+      const s = document.createElement('script');
+      s.src = 'scenes/' + f + '.js';
+      s.onload = next;
+      s.onerror = () => { console.error('載入失敗 ' + f); next(); };
+      document.head.appendChild(s);
+    }
+    next();
+  })();
+  window.renderScene = function(id, t){
+    const sc = SCENES[id];
+    if (!sc) throw new Error('沒有場景 ' + id);
+    document.getElementById('stage').innerHTML = sc.draw(t);
+    return 1;
+  };
+</script>
+</body></html>
