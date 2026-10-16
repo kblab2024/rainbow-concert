@@ -66,7 +66,7 @@
     R.road(ROAD_B, 16, 440),
     R.flowerDots(9, 12, 1300, 1700, 700, 1000, { size: 1.3 }),
     // 阿晴：右手提行李，左手揮
-    R.person('aqing', { x: 1150, y: 772, s: 1.1, pose: 'stand', suitcase: true, mouth: 'laugh',
+    R.person('aqing', { x: 1150, y: 700, s: 1.0, pose: 'stand', suitcase: true, mouth: 'laugh',   // 行李要在 3 行文字卡（y 703 起）上方
       angles: { aL: [-150, -14 - 26 * R.wave(t, 2)], aR: [8, 4], tilt: -3 + 2 * R.wave(t, 2) } }),
     // 黑狗兄驚訝的半身（下半身在文字卡後面）
     R.person('heigou', { x: 330, y: 930, s: 1.32, pose: 'stand', shirt: 'blue', mouth: 'o',
